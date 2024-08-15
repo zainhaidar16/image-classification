@@ -8,52 +8,39 @@ import json
 
 # Load ImageNet labels locally
 def load_labels():
-    try:
-        with open("imagenet-simple-labels.json") as f:
-            labels = json.load(f)
-        st.write("Labels loaded successfully.")
-    except Exception as e:
-        st.error(f"Failed to load labels: {e}")
-        labels = None
+    with open("imagenet-simple-labels.json") as f:
+        labels = json.load(f)
     return labels
 
-# Function to load the selected model
-def load_model(model_name):
-    try:
-        if model_name == "ResNet-50":
-            model = models.resnet50(pretrained=True)
-        elif model_name == "Inception v3":
-            model = models.inception_v3(pretrained=True)
-        elif model_name == "VGG-16":
-            model = models.vgg16(pretrained=True)
-        elif model_name == "DenseNet-121":
-            model = models.densenet121(pretrained=True)
-        elif model_name == "MobileNet v2":
-            model = models.mobilenet_v2(pretrained=True)
-        else:
-            st.error("Unknown model selected!")
-            return None
-        model.eval()
-        st.write("Model loaded successfully.")
-    except Exception as e:
-        st.error(f"Failed to load model: {e}")
-        model = None
-    return model
+# Function to load all models
+def load_all_models():
+    models_dict = {
+        "ResNet-50": models.resnet50(weights=models.ResNet50_Weights.DEFAULT),
+        "Inception v3": models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT),
+        "VGG-16": models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1),
+        "DenseNet-121": models.densenet121(weights=models.DenseNet121_Weights.DEFAULT),
+        "MobileNet v2": models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT),
+    }
+    for name, model in models_dict.items():
+        model.eval()  # Set model to evaluation mode
+    return models_dict
 
 # Streamlit app layout
 st.set_page_config(page_title="Image Classification App", layout="centered")
 
 # Header section
-st.title("🖼️ Image Classification App")
-st.write("Upload an image and the app will classify it using a pre-trained model.")
+st.title("🖼️ Image Classification App - Model Comparison")
+st.write("Upload an image and compare predictions from multiple pre-trained models.")
 
 # Sidebar for additional settings
 st.sidebar.header("Settings")
 
-# Model selection
-model_name = st.sidebar.selectbox(
-    "Choose a pre-trained model:",
-    ("ResNet-50", "Inception v3", "VGG-16", "DenseNet-121", "MobileNet v2")
+# Model selection checkbox
+st.sidebar.subheader("Select Models to Compare")
+selected_models = st.sidebar.multiselect(
+    "Choose the models:",
+    ["ResNet-50", "Inception v3", "VGG-16", "DenseNet-121", "MobileNet v2"],
+    default=["ResNet-50", "Inception v3", "VGG-16", "DenseNet-121", "MobileNet v2"]
 )
 
 # Confidence threshold slider
@@ -66,10 +53,17 @@ threshold = st.sidebar.slider(
     help="Filter predictions based on the confidence score. Only predictions above this threshold will be displayed."
 )
 
-# Load the selected model
-model = load_model(model_name)
+# Option to display top N predictions
+top_n = st.sidebar.slider(
+    "Number of Top Predictions to Display",
+    min_value=1,
+    max_value=5,
+    value=5,
+    help="Specify the number of top predictions to display for each model."
+)
 
-# Load labels
+# Load the models and labels
+models_dict = load_all_models()
 labels = load_labels()
 
 # Define the image preprocessing steps
@@ -95,38 +89,38 @@ if uploaded_file is not None:
     img_tensor = preprocess(image)
     img_tensor = img_tensor.unsqueeze(0)  # Add batch dimension
 
-    # Display a progress bar while the prediction is being made
-    with st.spinner(f"Classifying using {model_name}..."):
-        # Make prediction
-        with torch.no_grad():
-            output = model(img_tensor)
-            # No need to access .logits, just use the output directly
-            probabilities = F.softmax(output[0], dim=0)
+    # Initialize results list
+    results = []
 
-        # Get the top 5 predictions
-        top5_prob, top5_catid = torch.topk(probabilities, 5)
+    # Loop through each selected model and make predictions
+    for model_name in selected_models:
+        model = models_dict[model_name]
+        with st.spinner(f"Classifying using {model_name}..."):
+            with torch.no_grad():
+                output = model(img_tensor)
+                probabilities = F.softmax(output[0], dim=0)
 
-    # Display the results filtered by the threshold
-    st.subheader("Prediction Results")
-    for i in range(top5_prob.size(0)):
-        if top5_prob[i].item() >= threshold:
-            st.write(f"**{labels[top5_catid[i]]}**: {top5_prob[i].item()*100:.2f}%")
-        else:
-            st.write(f"*Confidence for {labels[top5_catid[i]]} is below the threshold*")
+            # Get the top N predictions
+            top_prob, top_catid = torch.topk(probabilities, top_n)
 
-    # Add an expander to display more information
-    with st.expander("See explanation"):
-        st.write(f"""
-            The model used for classification is **{model_name}**. 
-            It is pre-trained on the ImageNet dataset, which contains over 1 million images across 1000 categories.
-            The probabilities shown above are the model's confidence in each prediction.
-            You can adjust the confidence threshold to filter out less certain predictions.
-        """)
+            # Store the results
+            for i in range(top_prob.size(0)):
+                if top_prob[i].item() >= threshold:
+                    results.append((model_name, labels[top_catid[i]], top_prob[i].item()))
+
+    # Convert results to a dataframe for display
+    import pandas as pd
+    df_results = pd.DataFrame(results, columns=["Model", "Predicted Class", "Confidence"])
+    df_results["Confidence"] = df_results["Confidence"].apply(lambda x: f"{x*100:.2f}%")
+
+    # Display the results in a table
+    st.subheader("Model Comparison")
+    st.dataframe(df_results)
 
 else:
     st.info("Please upload an image file to get started.")
 
-# Footer section
+# Footer section with personal details and links
 st.markdown(
     """
     <style>
@@ -136,13 +130,20 @@ st.markdown(
         bottom: 0;
         left: 0;
         width: 100%;
-        background-color: #803DF5;
+        background-color: #f1f1f1;
         text-align: center;
         padding: 10px;
+        font-size: 14px;
+        color: #333;
     }
     </style>
     <div class="footer">
-        <p>Developed with ❤️ by Zain Haidar</p>
+        <p>Developed with ❤️ by <a href="https://your-portfolio-link.com" target="_blank">Zain Haidar</a></p>
+        <p>
+            <a href="https://github.com/zainhadiar16" target="_blank">GitHub</a> |
+            <a href="https://www.linkedin.com/in/your-linkedin/" target="_blank">LinkedIn</a> |
+            <a href="https://zaintheanalyst.com" target="_blank">Portfolio</a>
+        </p>
     </div>
     """, unsafe_allow_html=True
 )
