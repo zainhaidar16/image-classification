@@ -29,7 +29,7 @@ def load_all_models():
 st.set_page_config(page_title="Image Classification App", layout="centered")
 
 # Header section
-st.title("🖼️ Image Classification App - Model Comparison")
+st.title("🖼️ Image Classification App")
 st.write("Upload an image and compare predictions from multiple pre-trained models.")
 
 # Sidebar for additional settings
@@ -140,8 +140,8 @@ st.markdown(
     <div class="footer">
         <p>Developed with ❤️ by <a href="https://your-portfolio-link.com" target="_blank">Zain Haidar</a></p>
         <p>
-            <a href="https://github.com/zainhadiar16" target="_blank">GitHub</a> |
-            <a href="https://www.linkedin.com/in/your-linkedin/" target="_blank">LinkedIn</a> |
+            <a href="https://github.com/zainhaidar16" target="_blank">GitHub</a> |
+            <a href="https://www.linkedin.com/in/zain-haidar/" target="_blank">LinkedIn</a> |
             <a href="https://zaintheanalyst.com" target="_blank">Portfolio</a>
         </p>
     </div>
