@@ -5,6 +5,7 @@ import torchvision.transforms as transforms
 from torchvision import models
 import torch.nn.functional as F
 import json
+import pandas as pd
 
 # Load ImageNet labels locally
 def load_labels():
@@ -27,6 +28,81 @@ def load_all_models():
 
 # Streamlit app layout
 st.set_page_config(page_title="Image Classification App", layout="centered")
+
+# Custom CSS for styling with orange color scheme
+st.markdown(
+    """
+    <style>
+    [data-testid="stAppViewContainer"] > .main {
+        background-color: #1a1a1a;
+        background-size: 180%;
+        background-position: top left;
+        background-repeat: no-repeat;
+        background-attachment: local;
+        color: #fff7ed;
+    }
+
+    [data-testid="stSidebar"] > div:first-child {
+        background-color: #2a2a2a;
+        background-position: center; 
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        color: #fed7aa;
+    }
+
+    [data-testid="stHeader"] {
+        background: rgba(0,0,0,0);
+    }
+
+    [data-testid="stToolbar"] {
+        right: 2rem;
+    }
+
+    /* Title and header colors */
+    .stApp header h1 {
+        color: #ea580c;
+    }
+    .stApp header h2, .stApp header h3 {
+        color: #c2410c;
+    }
+
+    /* Widget colors */
+    .stSelectbox, .stTextInput, .stNumberInput {
+        background-color: #fed7aa;
+        color: #7c2d12;
+    }
+
+    /* Button colors */
+    .stButton button {
+        background-color: #f97316;
+        color: white;
+    }
+
+    /* Footer and other text colors */
+    footer, .stApp .element-container {
+        color: #431407;
+    }
+
+    .footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #f97316;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        color: #fff7ed;
+    }
+
+    .footer a {
+        color: #fff7ed;
+        text-decoration: none;
+        padding: 0 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True
+)
 
 # Header section
 st.title("🖼️ Image Classification App")
@@ -109,7 +185,6 @@ if uploaded_file is not None:
                     results.append((model_name, labels[top_catid[i]], top_prob[i].item()))
 
     # Convert results to a dataframe for display
-    import pandas as pd
     df_results = pd.DataFrame(results, columns=["Model", "Predicted Class", "Confidence"])
     df_results["Confidence"] = df_results["Confidence"].apply(lambda x: f"{x*100:.2f}%")
 
@@ -123,26 +198,12 @@ else:
 # Footer section with personal details and links
 st.markdown(
     """
-    <style>
-    footer {visibility: hidden;}
-    .footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: #f1f1f1;
-        text-align: center;
-        padding: 10px;
-        font-size: 14px;
-        color: #333;
-    }
-    </style>
     <div class="footer">
-        <p>Developed with ❤️ by <a href="https://your-portfolio-link.com" target="_blank">Zain Haidar</a></p>
+        <p>Developed with ❤️ by <a href="https://zaintheanalyst.com" target="_blank">Zain Haidar</a></p>
         <p>
             <a href="https://github.com/zainhaidar16" target="_blank">GitHub</a> |
             <a href="https://www.linkedin.com/in/zain-haidar/" target="_blank">LinkedIn</a> |
-            <a href="https://zaintheanalyst.com" target="_blank">Portfolio</a>
+            <a href="mailto:contact@zaintheanalyst.com">Email</a>
         </p>
     </div>
     """, unsafe_allow_html=True
